@@ -1,4 +1,5 @@
 import socket
+import os
 
 try:
     import httplib
@@ -37,6 +38,7 @@ def upload(resource, path, body, chunksize=4*1024*1024,
     media = apiclient.http.MediaFileUpload(path, chunksize=chunksize, 
         resumable=True, mimetype="application/octet-stream")
     request = resource.videos().insert(part=body_keys, body=body, media_body=media)
+    request.headers['Slug'] = os.path.basename(path)
     upload_fun = lambda: _upload_to_request(request, progress_callback)
     return lib.retriable_exceptions(upload_fun, 
         RETRIABLE_EXCEPTIONS, max_retries=max_retries)
