@@ -18,6 +18,7 @@ RETRIABLE_EXCEPTIONS = [
     httplib.CannotSendRequest, httplib.CannotSendHeader,
     httplib.ResponseNotReady, httplib.BadStatusLine, 
     TimeoutError, httplib2.ServerNotFoundError,
+    RequestError,
 ]
 
 def _upload_to_request(request, progress_callback):
