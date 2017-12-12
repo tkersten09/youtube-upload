@@ -36,6 +36,13 @@ try:
 except ImportError:
     progressbar = None
 
+from slackclient import SlackClient
+
+sc = SlackClient(<INSERT_API_TOKEN>)
+slack_channel = None
+slack_ts = None
+slack_video_path = None
+
 class InvalidCategory(Exception): pass
 class OptionsError(Exception): pass
 class AuthenticationError(Exception): pass
@@ -80,8 +87,25 @@ def get_progress_info():
                     bar.max_value = total_size
                 bar.start()
             bar.update(completed)
+            res = sc.api_call(
+              "chat.update",
+              channel=slack_channel,
+              text=slack_text.format("File: {0} - {1}".format(slack_video_path, bar._format_line())),
+              as_user = 'true',
+              ts = slack_ts
+            )
+            # print(res)
+            # print(slack_channel)
+            # print(slack_ts)
         def _finish():
             if hasattr(bar, "next_update"):
+                res = sc.api_call(
+                  "chat.update",
+                  channel=slack_channel,
+                  text=slack_text.format("File: {0} - {1}".format(slack_video_path, bar._format_line())),
+                  as_user = 'true',
+                  ts = slack_ts
+                )
                 return bar.finish()
         return progressinfo(callback=_callback, finish=_finish)
     else:
@@ -137,6 +161,26 @@ def upload_youtube_video(youtube, options, video_path, total_videos, index):
     }
 
     debug("Start upload: {0}".format(video_path))
+
+    global slack_channel
+    global slack_ts
+    global slack_video_path
+
+    slack_video_path = video_path
+    res = sc.api_call(
+      "chat.postMessage",
+      channel="#test",
+      as_user = 'true',
+      text="Start upload: {0}".format(slack_video_path)
+    )
+
+    slack_channel = res['channel']
+    slack_ts      = res['ts']
+
+    print(res)
+    print(slack_channel)
+    print(slack_ts)
+
     try:
         video_id = upload_video.upload(youtube, video_path, 
             request_body, progress_callback=progress.callback, 
