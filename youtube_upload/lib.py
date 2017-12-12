@@ -4,6 +4,8 @@ import sys
 import locale
 import random
 import time
+from timeit import default_timer as timer
+from datetime import timedelta
 import signal
 from contextlib import contextmanager
 
@@ -42,7 +44,12 @@ def catch_exceptions(exit_codes, fun, *args, **kwargs):
         fun(*args, **kwargs)
         return 0
     except tuple(exit_codes.keys()) as exc:
-        debug("[{0}] {1}".format(exc.__class__.__name__, exc))
+        message = ("[Catch error] " +
+                    "{error_type} ({error_msg}).").format(
+                    error_type=type(exc).__name__, 
+                    error_msg=str(exc) or "-", 
+                )
+        debug(message)
         return exit_codes[exc.__class__]
 
 def first(it):
@@ -65,17 +72,42 @@ def get_first_existing_filename(prefixes, relative_path):
 def retriable_exceptions(fun, retriable_exceptions, max_retries=None):
     """Run function and retry on some exceptions (with exponential backoff)."""
     retry = 0
+    
+    #initialise routine to reset retry to 1
+    seconds = 0.0
+    start = 0.0
+    end = 0.0
+    waited = -1.0
+    
     while 1:
         try:
             return fun()
         except tuple(retriable_exceptions) as exc:
             retry += 1
             if type(exc) not in retriable_exceptions:
+                message = ("[Non-Retryable error] " +
+                    "{error_type} ({error_msg}).").format(
+                    error_type=type(exc).__name__, 
+                    error_msg=str(exc) or "-", 
+                )
+                debug(message)
                 raise exc
+
             elif max_retries is not None and retry > max_retries:
                 debug("[Retryable errors] Retry limit reached")
                 raise exc
             else:
+                #reset retry to 1 after successful execution
+                end = timer()
+                if start != 0:
+                    waited = timedelta(seconds=end-start).seconds + timedelta(seconds=end-start).microseconds/1000000 
+                if seconds != 0 and waited != -1:
+                    #reset retry to 1 if more that seconds*2 has passed
+                    #between this and the last exception.
+                    if waited >= seconds*2:
+                        retry = 1
+                start = timer()
+                
                 seconds = random.uniform(0, 2**retry)
                 message = ("[Retryable error {current_retry}/{total_retries}] " +
                     "{error_type} ({error_msg}). Wait {wait_time} seconds").format(
