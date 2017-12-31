@@ -1,4 +1,6 @@
 import json
+import gtk
+import webkit
 
 CHECK_AUTH_JS = """
     var code = document.getElementById("code");
@@ -24,8 +26,6 @@ def _on_webview_status_bar_changed(webview, status, dialog):
 
 def get_code(url, size=(640, 480), title="Google authentication"):
     """Open a GTK webkit window and return the access code."""
-    import gtk
-    import webkit
     dialog = gtk.Dialog(title=title)
     webview = webkit.WebView()
     scrolled = gtk.ScrolledWindow()
